@@ -58,7 +58,7 @@ Este proyecto y sus contenidos no están afiliados, financiados, autorizados, re
 
 ## 👥 Créditos
 
-Este proyecto es desarrollado por **Israel Huamán** como parte de su formación en el desarrollo de aplicaciones móviles con enfoque profesional.
+Este proyecto es desarrollado por **izzzrael** como parte de su formación en el desarrollo de aplicaciones móviles con enfoque profesional.
 
 ## 📄 Licencia
 
