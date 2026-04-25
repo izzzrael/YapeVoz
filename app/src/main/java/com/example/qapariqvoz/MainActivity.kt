@@ -4,54 +4,87 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Button
+import android.speech.tts.TextToSpeech
 import android.widget.SeekBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.card.MaterialCardView
+import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
+
+    private var tts: TextToSpeech? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val sbSpeed = findViewById<SeekBar>(R.id.sbSpeed)
-        val sbPitch = findViewById<SeekBar>(R.id.sbPitch)
-        val btnPrueba = findViewById<Button>(R.id.btnPruebaVoz)
-        val btnAjustes = findViewById<Button>(R.id.btnAbrirAjustes)
 
-        val prefs = getSharedPreferences("YapeVozPrefs", Context.MODE_PRIVATE)
+        tts = TextToSpeech(this, this)
 
+        val seekBarSpeed = findViewById<SeekBar>(R.id.seekBarSpeed)
+        val seekBarPitch = findViewById<SeekBar>(R.id.seekBarPitch)
+        val btnPrueba = findViewById<MaterialCardView>(R.id.btnPrueba)
+        val btnPermisos = findViewById<MaterialCardView>(R.id.btnPermisos)
 
-        sbSpeed.progress = (prefs.getFloat("voz_speed", 1.0f) * 100).toInt()
-        sbPitch.progress = (prefs.getFloat("voz_pitch", 1.0f) * 100).toInt()
+        // 1. Abrimos la "libreta de notas" de Android
+        val sharedPref = getSharedPreferences("QapariqPrefs", Context.MODE_PRIVATE)
 
+        // 2. Cargamos los valores guardados (o 1.0 por defecto) para que las barras inicien donde las dejaste
+        val savedSpeed = sharedPref.getFloat("velocidad", 1.0f)
+        val savedPitch = sharedPref.getFloat("tono", 1.0f)
 
-        sbSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(p0: SeekBar?, progress: Int, p2: Boolean) {
-                val finalVal = if (progress < 10) 0.1f else progress / 100f
-                prefs.edit().putFloat("voz_speed", finalVal).apply()
+        seekBarSpeed.progress = (savedSpeed * 50).toInt()
+        seekBarPitch.progress = (savedPitch * 50).toInt()
+
+        // Lógica de Velocidad
+        seekBarSpeed.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val currentSpeed = (progress.toFloat() / 50f).coerceAtLeast(0.1f)
+                // Guardamos en la libreta
+                sharedPref.edit().putFloat("velocidad", currentSpeed).apply()
             }
-            override fun onStartTrackingTouch(p0: SeekBar?) {}
-            override fun onStopTrackingTouch(p0: SeekBar?) {}
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-
-        sbPitch.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(p0: SeekBar?, progress: Int, p2: Boolean) {
-                val finalVal = if (progress < 10) 0.1f else progress / 100f
-                prefs.edit().putFloat("voz_pitch", finalVal).apply()
+        // Lógica de Tono
+        seekBarPitch.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val currentPitch = (progress.toFloat() / 50f).coerceAtLeast(0.1f)
+                // Guardamos en la libreta
+                sharedPref.edit().putFloat("tono", currentPitch).apply()
             }
-            override fun onStartTrackingTouch(p0: SeekBar?) {}
-            override fun onStopTrackingTouch(p0: SeekBar?) {}
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
 
         btnPrueba.setOnClickListener {
-            val intent = Intent("TEST_VOZ")
-            sendBroadcast(intent)
+            // Leemos la libreta justo antes de probar
+            val speed = sharedPref.getFloat("velocidad", 1.0f)
+            val pitch = sharedPref.getFloat("tono", 1.0f)
+
+            tts?.setSpeechRate(speed)
+            tts?.setPitch(pitch)
+
+            tts?.speak("¡Cuchau! La voz está configurada correctamente.", TextToSpeech.QUEUE_FLUSH, null, null)
+            Toast.makeText(this, "Probando voz...", Toast.LENGTH_SHORT).show()
         }
 
-        btnAjustes.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        btnPermisos.setOnClickListener {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            startActivity(intent)
         }
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            tts?.language = Locale("es", "ES")
+        }
+    }
+
+    override fun onDestroy() {
+        tts?.stop()
+        tts?.shutdown()
+        super.onDestroy()
     }
 }
